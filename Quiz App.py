@@ -3,25 +3,34 @@ from tkinter import messagebox
 
 
 class SimpleQuizApp:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("Simple Quiz Application")
-        self.master.geometry("400x300")
-        self.master.resizable(False, False)
+    """A simple quiz application using tkinter GUI"""
 
-        # Initialize quiz state
+    def __init__(self, window):
+        self.window = window
+        self.window.title("Simple Quiz Game")
+        self.window.geometry("500x400")
+        self.window.resizable(False, False)
+
+        # Quiz state variables
         self.question_index = 0
-        self.user_score = 0
-        self.option_buttons = []
+        self.total_score = 0
+        self.quiz_questions = self.load_questions()
 
-        # Initialize widget attributes
+        # Initialize GUI element references
+        self.counter_label = None
         self.question_label = None
         self.button_frame = None
-        self.progress_label = None
-        self.restart_btn = None
+        self.answer_buttons = []
+        self.score_label = None
 
-        # Quiz data - easily customizable
-        self.quiz_data = [
+        # GUI elements
+        self.setup_ui()
+        self.display_current_question()
+
+    @staticmethod
+    def load_questions():
+        """Load quiz questions and answers"""
+        return [
             {
                 'text': "What is the capital city of France?",
                 'choices': ["London", "Madrid", "Paris", "Berlin"],
@@ -38,161 +47,164 @@ class SimpleQuizApp:
                 'answer': "4"
             },
             {
-                'text': "Which programming language is known as 'Python'?",
-                'choices': ["Snake Language", "Python", "Java", "C++"],
-                'answer': "Python"
+                'text': "What is the largest ocean on Earth?",
+                'choices': ["Atlantic", "Indian", "Arctic", "Pacific"],
+                'answer': "Pacific"
+            },
+            {
+                'text': "How many days are in a leap year?",
+                'choices': ["365", "366", "367", "364"],
+                'answer': "366"
             }
         ]
 
-        self.create_widgets()
-        self.display_current_question()
-
-    def create_widgets(self):
-        """Create and arrange the main UI components"""
+    def setup_ui(self):
+        """Create and arrange GUI elements"""
         # Title label
         title_label = tk.Label(
-            self.master,
-            text="Welcome to the Quiz!",
+            self.window,
+            text="🎯 Simple Quiz Game",
             font=("Arial", 16, "bold"),
             fg="blue"
         )
         title_label.pack(pady=10)
 
-        # Question display label
+        # Question counter
+        self.counter_label = tk.Label(
+            self.window,
+            text="",
+            font=("Arial", 10),
+            fg="gray"
+        )
+        self.counter_label.pack(pady=5)
+
+        # Question display
         self.question_label = tk.Label(
-            self.master,
+            self.window,
             text="",
             font=("Arial", 12),
-            wraplength=350,
+            wraplength=450,
             justify="center"
         )
         self.question_label.pack(pady=20)
 
         # Frame for answer buttons
-        self.button_frame = tk.Frame(self.master)
+        self.button_frame = tk.Frame(self.window)
         self.button_frame.pack(pady=10)
 
-        # Progress label
-        self.progress_label = tk.Label(
-            self.master,
-            text="",
-            font=("Arial", 10),
-            fg="gray"
-        )
-        self.progress_label.pack(pady=5)
+        # Store button references
+        self.answer_buttons = []
 
-        # Control buttons frame
-        control_frame = tk.Frame(self.master)
-        control_frame.pack(pady=20)
-
-        # Restart button
-        self.restart_btn = tk.Button(
-            control_frame,
-            text="Restart Quiz",
-            command=self.restart_quiz,
-            font=("Arial", 10),
-            bg="lightblue"
+        # Score display
+        self.score_label = tk.Label(
+            self.window,
+            text="Score: 0",
+            font=("Arial", 10, "bold"),
+            fg="green"
         )
-        self.restart_btn.pack(side=tk.LEFT, padx=5)
-
-        # Exit button
-        exit_btn = tk.Button(
-            control_frame,
-            text="Exit",
-            command=self.master.quit,
-            font=("Arial", 10),
-            bg="lightcoral"
-        )
-        exit_btn.pack(side=tk.LEFT, padx=5)
+        self.score_label.pack(side="bottom", pady=10)
 
     def display_current_question(self):
-        """Display the current question and its options"""
-        if self.question_index < len(self.quiz_data):
-            current_quiz = self.quiz_data[self.question_index]
+        """Show the current question and answer options"""
+        if self.question_index < len(self.quiz_questions):
+            # Get current question data
+            current_q = self.quiz_questions[self.question_index]
 
-            # Update question text
-            self.question_label.config(text=current_quiz['text'])
+            # Update question counter
+            self.counter_label.config(
+                text=f"Question {self.question_index + 1} of {len(self.quiz_questions)}"
+            )
 
-            # Update progress
-            progress_text = f"Question {self.question_index + 1} of {len(self.quiz_data)}"
-            self.progress_label.config(text=progress_text)
+            # Display question text
+            self.question_label.config(text=current_q['text'])
 
             # Clear previous buttons
-            self.clear_option_buttons()
+            self.clear_answer_buttons()
 
-            # Create new option buttons
-            for choice in current_quiz['choices']:
+            # Create new answer buttons
+            for choice in current_q['choices']:
                 btn = tk.Button(
                     self.button_frame,
                     text=choice,
-                    command=lambda selected=choice: self.handle_answer(selected),
                     font=("Arial", 10),
                     width=15,
                     height=2,
-                    bg="lightgreen"
+                    command=lambda selected=choice: self.handle_answer(selected)
                 )
-                btn.pack(pady=5, fill="x")
-                self.option_buttons.append(btn)
+                btn.pack(pady=5)
+                self.answer_buttons.append(btn)
+
+            # Update score display
+            self.score_label.config(text=f"Score: {self.total_score}")
         else:
-            self.display_final_results()
+            self.show_final_results()
+
+    def clear_answer_buttons(self):
+        """Remove all answer buttons from the screen"""
+        for button in self.answer_buttons:
+            button.destroy()
+        self.answer_buttons.clear()
 
     def handle_answer(self, selected_choice):
-        """Process the user's answer selection"""
-        correct_answer = self.quiz_data[self.question_index]['answer']
+        """Process the selected answer"""
+        correct_answer = self.quiz_questions[self.question_index]['answer']
 
         # Check if answer is correct
         if selected_choice == correct_answer:
-            self.user_score += 1
-            messagebox.showinfo("Correct!", "Well done! That's the right answer.")
+            self.total_score += 1
+            messagebox.showinfo("Correct! ✓", f"Great job! The answer is {correct_answer}")
         else:
-            messagebox.showinfo("Incorrect", f"Sorry, the correct answer is: {correct_answer}")
+            messagebox.showinfo("Incorrect ✗", f"Sorry, the correct answer is {correct_answer}")
 
         # Move to next question
         self.question_index += 1
         self.display_current_question()
 
-    def clear_option_buttons(self):
-        """Remove all option buttons from the interface"""
-        for button in self.option_buttons:
-            button.destroy()
-        self.option_buttons.clear()
-
-    def display_final_results(self):
-        """Show the final quiz results"""
-        self.clear_option_buttons()
-
+    def show_final_results(self):
+        """Display final score and offer to restart"""
         # Calculate percentage
-        percentage = (self.user_score / len(self.quiz_data)) * 100
+        percentage = (self.total_score / len(self.quiz_questions)) * 100
 
-        # Display results
-        result_text = f"Quiz Complete!\n\nYour Score: {self.user_score}/{len(self.quiz_data)}\nPercentage: {percentage:.1f}%"
+        # Create result message
+        result_msg = f"Quiz Complete!\n\n"
+        result_msg += f"Final Score: {self.total_score} out of {len(self.quiz_questions)}\n"
+        result_msg += f"Percentage: {percentage:.1f}%\n\n"
 
+        # Add performance comment
         if percentage >= 80:
-            result_text += "\n\nExcellent work! 🎉"
+            result_msg += "Excellent work! 🌟"
         elif percentage >= 60:
-            result_text += "\n\nGood job! 👍"
+            result_msg += "Good job! 👍"
         else:
-            result_text += "\n\nKeep practicing! 📚"
+            result_msg += "Keep practicing! 📚"
 
-        self.question_label.config(text=result_text)
-        self.progress_label.config(text="")
+        # Show result dialog
+        play_again = messagebox.askyesno("Quiz Results", result_msg + "\n\nWould you like to play again?")
 
-        # Show results in a message box too
-        messagebox.showinfo("Quiz Results", result_text)
+        if play_again:
+            self.restart_quiz()
+        else:
+            self.window.quit()
 
     def restart_quiz(self):
         """Reset the quiz to start over"""
         self.question_index = 0
-        self.user_score = 0
+        self.total_score = 0
         self.display_current_question()
 
 
 def main():
     """Main function to run the quiz application"""
+    # Create main window
     root = tk.Tk()
-    SimpleQuizApp(root)  # We don't need to store the app instance
+
+    # Create quiz app instance
+    SimpleQuizApp(root)
+
+    # Start the GUI event loop
     root.mainloop()
 
 
+# Run the application
 if __name__ == "__main__":
     main()
